@@ -7940,7 +7940,7 @@ void StorageTexture::writeBackLayers(const std::vector<bool>& layers) {
             if (from >= to) continue;
             const bool edge = from != at || to != at + block;
             const auto index = static_cast<std::size_t>((at - spanBegin) / block);
-            const bool isFirstStoreOnUnwatched = !tracked && layerGeneration[layer] == 0;
+            const bool isFirstStoreOnUnwatched = !GuestMemory::Watched(descriptor.baseAddress, static_cast<std::size_t>(guestBytes)) && !layerOriginal[layer];
             const bool kept = isFirstStoreOnUnwatched ? false : keptAtUnwatchHolds(from, layer);
             const bool written = kept || unknown || (changedBlocks[index] == GuestMemory::BlockWritten && (compared[layer] || !edge || GuestMemory::StoredOver(from, static_cast<std::size_t>(to - from), unitBlockGeneration(layer, at))) && !cpuLeftUnchanged(layer, from, to, edge));
             if (written && !isFirstStoreOnUnwatched && (!drawn.rect || (layerTracked && !kept && !unknown && cpuBlocks[index] == 0))) {
@@ -8033,7 +8033,7 @@ void StorageTexture::writeBackLayers(const std::vector<bool>& layers) {
     if (!segments.empty()) {
         Require(!unsavedOutsideWatch, unsavedCause);
         // Outside the write watch the stored bytes are what the next store compares with.
-        const auto saveUnits = GuestMemory::Watched(firstStored, static_cast<std::size_t>(lastStored - firstStored)) ? std::vector<std::uint32_t>{} : prepareStoredSave(layers, skippedLayer);
+        const auto saveUnits = tracked ? std::vector<std::uint32_t>{} : prepareStoredSave(layers, skippedLayer);
         if (blockUnits) {
             if (guestBytes <= SmallStoreBytes) PublishShadow(firstStored, static_cast<std::size_t>(lastStored - firstStored), PublishScope::PartialUnits, PublishReason::Upload);
             // The kept blocks alone pass through the retiler (windows of their slices).
